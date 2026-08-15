@@ -12,8 +12,15 @@ if (exploreBtn) {
       document.querySelector('#services')?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
-    const target = destination === 'malaysia' ? 'malaysia.html' : service ? `${service}.html` : 'destinations.html';
-    window.location.href = target;
+    if (destination === 'malaysia') {
+      window.location.href = 'malaysia.html';
+      return;
+    }
+    if (service) {
+      window.location.href = `${service}.html`;
+      return;
+    }
+    document.querySelector('.destinations')?.scrollIntoView({ behavior: 'smooth' });
   });
 }
 
