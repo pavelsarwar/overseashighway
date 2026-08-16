@@ -6,10 +6,9 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    /* More distinctive hero spacing after removing the eyebrow */
     .hero-copy h1{margin-top:0}
 
-    /* Subtle motion across key cards — no constant distracting movement */
+    /* Subtle motion across key cards */
     .service-card,.destination-card,.office-card,.trust-points>div,.app-grid a,.malaysia-stack a{
       transition:transform .32s ease,box-shadow .32s ease,border-color .32s ease;
     }
@@ -18,17 +17,18 @@
       box-shadow:0 18px 42px rgba(16,42,67,.10);
     }
 
-    /* Social area: make it feel like a dedicated brand channel hub */
+    /* Social area: clean highlighted panel, no line under the buttons */
     .social-network{
       position:relative;
       overflow:hidden;
       margin-top:34px!important;
       padding:24px!important;
+      border:0!important;
       border-top:0!important;
-      border:1px solid rgba(255,255,255,.12)!important;
+      border-bottom:0!important;
       border-radius:22px;
       background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(24,166,184,.10),rgba(255,255,255,.035));
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 12px 34px rgba(0,0,0,.10);
     }
     .social-network:before{
       content:'SOCIAL CHANNELS';
@@ -41,22 +41,37 @@
       font-size:9px;
       font-weight:800;
       letter-spacing:.14em;
+      border:0!important;
     }
+    .social-network:after{display:none!important;content:none!important}
     .social-network>strong{
       display:block!important;
       margin:0 0 16px!important;
+      padding:0!important;
+      border:0!important;
       font-family:'Manrope','Inter',sans-serif;
       font-size:clamp(20px,2.3vw,28px);
       letter-spacing:-.025em;
       color:#fff;
     }
-    .social-links{gap:10px!important}
+    .social-links{
+      gap:10px!important;
+      margin:0!important;
+      padding:0!important;
+      padding-bottom:0!important;
+      border:0!important;
+      border-bottom:0!important;
+    }
+    .social-links:after{display:none!important;content:none!important}
     .social-links a{
       min-height:42px;
       padding:10px 14px!important;
+      margin-bottom:0!important;
       border-radius:13px!important;
       background:rgba(255,255,255,.075)!important;
       border:1px solid rgba(255,255,255,.12)!important;
+      text-decoration:none!important;
+      box-shadow:none!important;
       font-size:12px!important;
       transition:transform .25s ease,background .25s ease,border-color .25s ease!important;
     }
@@ -66,50 +81,63 @@
       border-color:rgba(245,158,11,.42)!important;
     }
 
-    /* A restrained travel motif: plane rises across the global-presence area */
-    .global-offices{position:relative!important;overflow:hidden!important}
-    .flight-path{
+    /* Plane animation belongs in the hero, not the footer */
+    .hero{position:relative!important;overflow:hidden!important;isolation:isolate}
+    .hero>.container{position:relative;z-index:2}
+    .hero-flight-path{
       position:absolute;
-      left:-60px;
-      bottom:18px;
-      z-index:0;
-      font-size:22px;
-      opacity:.16;
+      left:-70px;
+      bottom:10%;
+      z-index:1;
+      font-size:26px;
+      color:rgba(255,255,255,.68);
       pointer-events:none;
-      filter:grayscale(1) brightness(2);
-      animation:overseasFlight 18s linear infinite;
+      filter:drop-shadow(0 5px 10px rgba(0,0,0,.12));
+      animation:heroFlight 15s cubic-bezier(.22,.61,.36,1) infinite;
     }
-    .global-offices>.container{position:relative;z-index:1}
-    @keyframes overseasFlight{
-      0%{transform:translate(0,45px) rotate(-18deg);opacity:0}
-      10%{opacity:.16}
-      75%{opacity:.16}
-      100%{transform:translate(calc(100vw + 120px),-310px) rotate(-18deg);opacity:0}
+    .hero-flight-path:after{
+      content:'';
+      position:absolute;
+      width:140px;
+      height:1px;
+      right:20px;
+      top:50%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18));
+      transform:rotate(2deg);
+    }
+    @keyframes heroFlight{
+      0%,10%{transform:translate(0,38px) rotate(-18deg);opacity:0}
+      17%{opacity:.62}
+      70%{opacity:.58}
+      86%,100%{transform:translate(calc(100vw + 140px),-250px) rotate(-18deg);opacity:0}
     }
 
-    /* Gentle reveal when sections enter the viewport */
+    /* Gentle reveal */
     .motion-reveal{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s ease}
     .motion-reveal.is-visible{opacity:1;transform:none}
 
     @media (prefers-reduced-motion:reduce){
-      .flight-path{display:none!important}
+      .hero-flight-path{display:none!important}
       .motion-reveal{opacity:1!important;transform:none!important;transition:none!important}
       .service-card,.destination-card,.office-card,.trust-points>div,.app-grid a,.malaysia-stack a{transition:none!important}
     }
     @media(max-width:640px){
       .social-network{padding:19px!important}
-      .flight-path{font-size:18px;animation-duration:14s}
+      .hero-flight-path{font-size:20px;animation-duration:13s}
     }
   `;
   document.head.appendChild(style);
 
-  const offices = document.querySelector('.global-offices');
-  if (offices && !offices.querySelector('.flight-path')) {
+  // Remove any previously injected footer plane.
+  document.querySelectorAll('.global-offices .flight-path').forEach(el => el.remove());
+
+  const hero = document.querySelector('.hero');
+  if (hero && !hero.querySelector('.hero-flight-path')) {
     const plane = document.createElement('span');
-    plane.className = 'flight-path';
+    plane.className = 'hero-flight-path';
     plane.setAttribute('aria-hidden','true');
     plane.textContent = '✈';
-    offices.appendChild(plane);
+    hero.appendChild(plane);
   }
 
   const revealTargets = document.querySelectorAll('.service-card,.destination-card,.office-card,.trust-points>div');
