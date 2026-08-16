@@ -144,4 +144,11 @@
       observer.observe(el);
     });
   }
+
+  // Events preview is inserted after the services section and kept in sync from Google Sheets.
+  if(!document.querySelector('script[src="events-home.js"]')){
+    const eventsScript=document.createElement('script');
+    eventsScript.src='events-home.js';
+    document.body.appendChild(eventsScript);
+  }
 })();
