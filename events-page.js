@@ -22,24 +22,67 @@
     return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||'').trim()])));
   }
 
-  function formatDateTime(iso){
-    const d=new Date(iso); if(Number.isNaN(d.getTime())) return {date:'Date TBA',time:'Time TBA'};
-    const date=new Intl.DateTimeFormat('en',{weekday:'long',day:'2-digit',month:'short',year:'numeric'}).format(d);
-    const time=new Intl.DateTimeFormat('en',{hour:'numeric',minute:'2-digit'}).format(d);
-    return {date,time};
+  // Sheet timezone is Asia/Kuala_Lumpur. Build +08:00 timestamps so expiry
+  // stays correct regardless of the visitor's own device timezone.
+  function normalizeDate(raw){
+    const s=String(raw||'').trim();
+    if(!s)return '';
+    let m;
+    if((m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/))) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    // Google Sheet locale is en_US, so numeric exported dates are normally M/D/YYYY.
+    if((m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/))) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+    const d=new Date(s);
+    if(Number.isNaN(d.getTime()))return '';
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function normalizeTime(raw, fallback='00:00:00'){
+    const s=String(raw||'').trim();
+    if(!s)return fallback;
+    let m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if(!m)return fallback;
+    let h=Number(m[1]);const min=m[2];const sec=m[3]||'00';const ap=(m[4]||'').toUpperCase();
+    if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;
+    return `${String(h).padStart(2,'0')}:${min}:${sec}`;
+  }
+
+  function buildDateTime(dateRaw,timeRaw,end=false){
+    const date=normalizeDate(dateRaw);if(!date)return null;
+    const time=normalizeTime(timeRaw,end?'23:59:59':'00:00:00');
+    const d=new Date(`${date}T${time}+08:00`);
+    return Number.isNaN(d.getTime())?null:d;
+  }
+
+  function eventStart(e){
+    if(e.StartDateTime){const d=new Date(e.StartDateTime);if(!Number.isNaN(d.getTime()))return d;}
+    return buildDateTime(e['Start Date'],e['Start Time'],false);
   }
 
   function eventEnd(e){
-    const raw=e.EndDateTime||e.StartDateTime;const d=new Date(raw);return Number.isNaN(d.getTime())?new Date(8640000000000000):d;
+    if(e.EndDateTime){const d=new Date(e.EndDateTime);if(!Number.isNaN(d.getTime()))return d;}
+    const endDate=e['End Date']||e['Start Date'];
+    const endTime=e['End Time'];
+    return buildDateTime(endDate,endTime,true) || eventStart(e) || new Date(8640000000000000);
   }
 
+  function formatDateTime(dateObj){
+    const d=dateObj instanceof Date?dateObj:new Date(dateObj);
+    if(Number.isNaN(d.getTime())) return {date:'Date TBA',time:'Time TBA'};
+    const options={timeZone:'Asia/Kuala_Lumpur'};
+    const date=new Intl.DateTimeFormat('en',{...options,weekday:'long',day:'2-digit',month:'short',year:'numeric'}).format(d);
+    const time=new Intl.DateTimeFormat('en',{...options,hour:'numeric',minute:'2-digit'}).format(d);
+    return {date,time};
+  }
+
+  function getField(e,...names){for(const n of names){if(e[n])return e[n]}return ''}
+
   function card(e,past=false){
-    const start=e.StartDateTime||''; const f=formatDateTime(start);
+    const start=eventStart(e);const f=formatDateTime(start);
     const title=escapeHtml(e.Title||'Untitled Event');
     const location=escapeHtml(e.Location||'Location TBA');
-    const desc=escapeHtml(e.Description||'');
-    const category=escapeHtml(e.Category||'EVENT').toUpperCase();
-    const url=(e.RegisterURL||'').trim();
+    const desc=escapeHtml(getField(e,'Description','description'));
+    const category=escapeHtml(getField(e,'Category','category')||'EVENT').toUpperCase();
+    const url=getField(e,'RegisterURL','Register URL','Registration URL','Link','URL').trim();
     return `<article class="event-card">
       <div class="event-title-row"><span class="event-pill">${category}</span>${past?'<span class="event-status">PAST EVENT</span>':''}</div>
       <h3>${title}</h3>
@@ -62,15 +105,16 @@
     }
     const url=`https://docs.google.com/spreadsheets/d/${encodeURIComponent(cfg.sheetId)}/export?format=csv&gid=${encodeURIComponent(cfg.gid||'0')}`;
     try{
-      const res=await fetch(url,{cache:'no-store'}); if(!res.ok)throw new Error('Unable to load events');
-      const events=parseCsv(await res.text()).filter(e=>e.Title&&e.StartDateTime);
+      const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error('Unable to load events');
+      const events=parseCsv(await res.text()).filter(e=>e.Title&&eventStart(e));
       const now=new Date();
-      const upcoming=events.filter(e=>eventEnd(e)>=now).sort((a,b)=>new Date(a.StartDateTime)-new Date(b.StartDateTime));
-      const past=events.filter(e=>eventEnd(e)<now).sort((a,b)=>new Date(b.StartDateTime)-new Date(a.StartDateTime));
+      const upcoming=events.filter(e=>eventEnd(e)>=now).sort((a,b)=>eventStart(a)-eventStart(b));
+      const past=events.filter(e=>eventEnd(e)<now).sort((a,b)=>eventStart(b)-eventStart(a));
       if(homepageGrid){const items=upcoming.slice(0,Number(cfg.homepageLimit)||2);setState(homepageGrid,items.length?items.map(e=>card(e)).join(''):'<div class="events-empty">No upcoming events at the moment.</div>')}
       if(upcomingGrid)setState(upcomingGrid,upcoming.length?upcoming.map(e=>card(e)).join(''):'<div class="events-empty">No upcoming events at the moment.</div>');
       if(pastGrid)setState(pastGrid,past.length?past.map(e=>card(e,true)).join(''):'<div class="events-empty">Past events will appear here automatically.</div>');
     }catch(err){
+      console.error('Events load error:',err);
       const msg='<div class="events-error">Events could not be loaded right now. Please try again shortly.</div>';
       setState(homepageGrid,msg);setState(upcomingGrid,msg);
     }
