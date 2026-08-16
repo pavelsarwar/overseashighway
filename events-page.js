@@ -22,15 +22,19 @@
     return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,(r[i]||'').trim()])));
   }
 
-  // Sheet timezone is Asia/Kuala_Lumpur. Build +08:00 timestamps so expiry
-  // stays correct regardless of the visitor's own device timezone.
   function normalizeDate(raw){
     const s=String(raw||'').trim();
     if(!s)return '';
     let m;
     if((m=s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/))) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
-    // Google Sheet locale is en_US, so numeric exported dates are normally M/D/YYYY.
-    if((m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/))) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+    if((m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/))){
+      const a=Number(m[1]), b=Number(m[2]);
+      // Your current sheet uses DD/MM/YYYY. If the first number is >12 it is definitely the day.
+      // For ambiguous dates we also default to DD/MM/YYYY to match the sheet's current format.
+      const day=a, month=b;
+      if(month<1||month>12||day<1||day>31)return '';
+      return `${m[3]}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
     const d=new Date(s);
     if(Number.isNaN(d.getTime()))return '';
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -39,7 +43,7 @@
   function normalizeTime(raw, fallback='00:00:00'){
     const s=String(raw||'').trim();
     if(!s)return fallback;
-    let m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    const m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
     if(!m)return fallback;
     let h=Number(m[1]);const min=m[2];const sec=m[3]||'00';const ap=(m[4]||'').toUpperCase();
     if(ap==='PM'&&h<12)h+=12;if(ap==='AM'&&h===12)h=0;
@@ -60,29 +64,29 @@
 
   function eventEnd(e){
     if(e.EndDateTime){const d=new Date(e.EndDateTime);if(!Number.isNaN(d.getTime()))return d;}
-    const endDate=e['End Date']||e['Start Date'];
-    const endTime=e['End Time'];
-    return buildDateTime(endDate,endTime,true) || eventStart(e) || new Date(8640000000000000);
+    return buildDateTime(e['End Date']||e['Start Date'],e['End Time'],true) || eventStart(e) || new Date(8640000000000000);
   }
 
   function formatDateTime(dateObj){
     const d=dateObj instanceof Date?dateObj:new Date(dateObj);
     if(Number.isNaN(d.getTime())) return {date:'Date TBA',time:'Time TBA'};
     const options={timeZone:'Asia/Kuala_Lumpur'};
-    const date=new Intl.DateTimeFormat('en',{...options,weekday:'long',day:'2-digit',month:'short',year:'numeric'}).format(d);
-    const time=new Intl.DateTimeFormat('en',{...options,hour:'numeric',minute:'2-digit'}).format(d);
-    return {date,time};
+    return {
+      date:new Intl.DateTimeFormat('en',{...options,weekday:'long',day:'2-digit',month:'short',year:'numeric'}).format(d),
+      time:new Intl.DateTimeFormat('en',{...options,hour:'numeric',minute:'2-digit'}).format(d)
+    };
   }
 
   function getField(e,...names){for(const n of names){if(e[n])return e[n]}return ''}
+  function cleanUrl(raw){let s=String(raw||'').trim();if(!s)return '';s=s.replace(/^https?:\/\/https?:\/\//i,'https://');if(/^www\./i.test(s))s='https://'+s;return s;}
 
   function card(e,past=false){
-    const start=eventStart(e);const f=formatDateTime(start);
+    const f=formatDateTime(eventStart(e));
     const title=escapeHtml(e.Title||'Untitled Event');
     const location=escapeHtml(e.Location||'Location TBA');
     const desc=escapeHtml(getField(e,'Description','description'));
     const category=escapeHtml(getField(e,'Category','category')||'EVENT').toUpperCase();
-    const url=getField(e,'RegisterURL','Register URL','Registration URL','Link','URL').trim();
+    const url=cleanUrl(getField(e,'RegisterURL','Register URL','Registration URL','registration_link','Registration Link','Link','URL'));
     return `<article class="event-card">
       <div class="event-title-row"><span class="event-pill">${category}</span>${past?'<span class="event-status">PAST EVENT</span>':''}</div>
       <h3>${title}</h3>
@@ -96,7 +100,7 @@
     </article>`;
   }
 
-  function setState(el,html){if(el)el.innerHTML=html}
+  const setState=(el,html)=>{if(el)el.innerHTML=html};
 
   async function load(){
     if(!cfg.sheetId){
