@@ -8,6 +8,16 @@
   style.textContent = `
     .hero-copy h1{margin-top:0}
 
+    /* Desktop header: slightly larger and more confident without losing compact feel */
+    @media(min-width:961px){
+      .nav-wrap{min-height:82px!important;gap:16px!important}
+      .desktop-nav{gap:7px!important;padding:6px!important;border-radius:18px!important}
+      .desktop-nav a{font-size:14px!important;padding:10px 13px!important;border-radius:12px!important;gap:7px!important;line-height:1.2!important}
+      .nav-icon{width:20px!important;height:20px!important;flex-basis:20px!important;font-size:18px!important}
+      .nav-flag{width:23px!important;height:16px!important}
+      .nav-wrap>.btn.btn-small{font-size:13px!important;padding:11px 16px!important;border-radius:13px!important}
+    }
+
     /* Subtle motion across key cards */
     .service-card,.destination-card,.office-card,.trust-points>div,.app-grid a,.malaysia-stack a{
       transition:transform .32s ease,box-shadow .32s ease,border-color .32s ease;
@@ -54,14 +64,7 @@
       letter-spacing:-.025em;
       color:#fff;
     }
-    .social-links{
-      gap:10px!important;
-      margin:0!important;
-      padding:0!important;
-      padding-bottom:0!important;
-      border:0!important;
-      border-bottom:0!important;
-    }
+    .social-links{gap:10px!important;margin:0!important;padding:0!important;padding-bottom:0!important;border:0!important;border-bottom:0!important}
     .social-links:after{display:none!important;content:none!important}
     .social-links a{
       min-height:42px;
@@ -75,11 +78,7 @@
       font-size:12px!important;
       transition:transform .25s ease,background .25s ease,border-color .25s ease!important;
     }
-    .social-links a:hover{
-      transform:translateY(-3px);
-      background:rgba(255,255,255,.13)!important;
-      border-color:rgba(245,158,11,.42)!important;
-    }
+    .social-links a:hover{transform:translateY(-3px);background:rgba(255,255,255,.13)!important;border-color:rgba(245,158,11,.42)!important}
 
     /* Plane animation belongs in the hero, not the footer */
     .hero{position:relative!important;overflow:hidden!important;isolation:isolate}
@@ -95,16 +94,7 @@
       filter:drop-shadow(0 5px 10px rgba(0,0,0,.12));
       animation:heroFlight 15s cubic-bezier(.22,.61,.36,1) infinite;
     }
-    .hero-flight-path:after{
-      content:'';
-      position:absolute;
-      width:140px;
-      height:1px;
-      right:20px;
-      top:50%;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.18));
-      transform:rotate(2deg);
-    }
+    .hero-flight-path:after{content:'';position:absolute;width:140px;height:1px;right:20px;top:50%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18));transform:rotate(2deg)}
     @keyframes heroFlight{
       0%,10%{transform:translate(0,38px) rotate(-18deg);opacity:0}
       17%{opacity:.62}
@@ -112,7 +102,6 @@
       86%,100%{transform:translate(calc(100vw + 140px),-250px) rotate(-18deg);opacity:0}
     }
 
-    /* Gentle reveal */
     .motion-reveal{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s ease}
     .motion-reveal.is-visible{opacity:1;transform:none}
 
@@ -128,7 +117,6 @@
   `;
   document.head.appendChild(style);
 
-  // Remove any previously injected footer plane.
   document.querySelectorAll('.global-offices .flight-path').forEach(el => el.remove());
 
   const hero = document.querySelector('.hero');
