@@ -1,8 +1,10 @@
 window.OVERSEAS_EVENTS_CONFIG = {
-  // Paste the Google Sheet ID after sharing the sheet as "Anyone with the link can view".
-  // Sheet columns (row 1): Title, StartDateTime, EndDateTime, Location, Description, RegisterURL, Category
-  // Example StartDateTime: 2026-09-03T17:00:00+06:00
-  sheetId: '',
+  sheetId: '1pm9ddbRRolyTJJlnpNNjly-urC4LjziiRKIOKmBDHoE',
   gid: '0',
-  homepageLimit: 2
+  homepageLimit: 2,
+  // Current Google Sheet headers:
+  // Title | Start Date | Start Time | End Date | End Time | Location | description
+  // Optional future columns supported by the site can be added after these:
+  // RegisterURL | Category
+  timezone: 'Asia/Kuala_Lumpur'
 };
