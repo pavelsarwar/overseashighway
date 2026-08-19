@@ -13,7 +13,14 @@
   document.head.appendChild(style);
 
   document.querySelectorAll('.site-footer .footer-bottom').forEach(bottom=>{
-    if(bottom.querySelector('.developer-credit')) return;
+    // Remove any existing/static/duplicate Pavel developer credits first.
+    bottom.querySelectorAll('a').forEach(a=>{
+      const text=(a.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+      const href=a.getAttribute('href')||'';
+      if(text.includes('developed with') || (text.includes('pavel') && href.includes('facebook.com/asmpavelsarwar'))) a.remove();
+    });
+    bottom.querySelectorAll('.developer-credit').forEach(el=>el.remove());
+
     const credit=document.createElement('a');
     credit.className='developer-credit';
     credit.href='https://www.facebook.com/asmpavelsarwar';
